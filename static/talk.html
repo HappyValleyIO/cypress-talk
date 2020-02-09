@@ -1,0 +1,281 @@
+<title>End-to-end testing with Cypress</title>
+<meta charset="utf-8">
+<style>
+    @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+    body {
+        font-family: 'Arial, Helvetica, sans-serif';
+    }
+
+    h1,
+    h2,
+    h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+    }
+
+    .remark-code,
+    .remark-inline-code {
+        font-family: 'Ubuntu Mono';
+    }
+
+    img {
+        max-width: 100%;
+    }
+
+    li {
+        padding-bottom: 0.5rem;
+    }
+
+    .remark-slide-container {
+        background-color: #363636;
+    }
+</style>
+</head>
+
+<body class="remark-container">
+    <textarea id="source" style="display: none;">class: center, middle
+
+
+# End-to-end testing with Cypress
+## #GlasgowJS @stepbeekio
+### Happy Valley IO
+
+---
+
+# Who am I?
+
+* Co-founder &amp; Full Stack Dev currently @ Happy Valley IO
+* Previously full-stack at Amazon @AmazonDevScot
+* Prior to that back-end at JPMC
+* Recovering Software Craftsmanship addict
+
+---
+
+# Love of SPA's
+
+* Started using VueJS almost everyday
+* *Loved* it passionately
+* Felt amazingly simple and dynamic and productive and wonderful
+* But...
+
+---
+
+## Trouble in paradise (or Pain in the SPA's)
+
+* SPA unit testing was better-ish in that it let me define actual behaviour
+* Component based testing was *fine*, but still "behaviour of code"
+* Tests involved a fair bit of learning to test effectively
+* Build tools caused pain
+* Code review wasn't very pleasant
+
+```javascript
+
+import { shallowMount } from '@vue/test-utils'
+import MyComponent from './MyComponent.vue'
+
+const wrapper = shallowMount(MyComponent)
+
+describe('MyComponent', () =&gt; {
+
+  it('renders the correct message', () =&gt; {
+    expect(wrapper.text()).toBe('Hello #GlasgowJS!')
+  })
+})
+```
+
+---
+
+class: center, middle
+
+# Tests didn't reflect how users were using the app
+
+---
+
+## Cypress: end-to-end testing through *enough* browser automation
+
+![Default-aligned image](cypress.png)
+
+---
+
+# Example Application (w/ StimulusJS)
+
+In ./static/app.html
+
+```html
+    <div class="content" data-controller="hello">
+        <h1 class="title" data-target="hello.greeting">Hello World!</h1>
+
+        <form data-action="submit->hello#greet">
+            <input data-target="hello.name" type="text">
+                
+            <button>Greet!</button>
+        </form>
+    </div>
+```
+
+![Default-aligned image](app.png)
+
+
+---
+
+# Augment with test attributes
+
+We use `data-test` so that we can select elements on our page without relying on structure/styling etc.
+
+```html
+    <div class="content" data-controller="hello">
+        <h1 class="title" data-target="hello.greeting" 
+            data-test="greeting-text">Hello World!</h1>
+
+        <form data-action="submit->hello#greet">
+            <input data-target="hello.name" type="text" 
+                data-test="greeting-input">
+
+            <button data-test="greeting-submit">Greet!</button>
+        </form>
+    </div>
+```
+
+---
+
+# Write our first test
+
+In ./cypress/integration/greeting.spec.js
+
+```javascript
+context('Greeting Application', () => {
+
+    beforeEach(() => {
+      cy.visit('/app.html')
+    })
+  
+    it('shows the appropriate greeting text on page load', () => {
+      cy.get('[data-test=greeting-text]').contains('Hello World!')
+    })
+})
+```
+
+![Default-aligned image](single-test.png)
+
+---
+
+# More tests = better?
+
+```javascript
+context('Greeting Application', () => {
+    beforeEach(() => {
+      cy.visit('/app.html')
+    })
+  
+    it('shows the appropriate greeting text on page load', () => {
+      cy.get('[data-test=greeting-text]').contains('Hello World!')
+    })
+  
+    it('greets the user with their name after form submission', () => {
+      // With return key
+      cy.get('[data-test=greeting-input]').type('Stephen{enter}')
+  
+      cy.get('[data-test=greeting-text]').contains('Hello Stephen!')
+
+      // With button click
+      cy.get('[data-test=greeting-input]').type('Stephen Again')
+      cy.get('[data-test=greeting-submit]').click()
+  
+      cy.get('[data-test=greeting-text]').contains('Hello Stephen Again!')
+    })
+  })
+```
+
+---
+
+class: center, middle
+# Live demo
+
+* Go to live demo, do not pass go
+
+---
+
+# Solving our problem
+
+* Core of initial problem was in using the system like a user
+ * Solved!
+* What about build systems?
+ * Who cares? Cypress is decoupled from our application. Just cares about final html
+* Code review
+ * Much easier for reviewer to walk through what behaviours are tested
+* What about the environment?
+ * Cypress 4.0 just released with more browsers supported (Edge, Firefox etc)
+ * With a little setup, runs happily headlessly in CI
+
+***Sweet bonus***: test runner interacting with DOM like a user with dev tools and time-travel step through is glorious
+
+---
+
+# Downsides?
+
+* Cypress can fail in a non-intuative way
+ * Debugging a shared memory exception when running in CI wasn't enjoyable
+* Some expected features aren't there
+ * iframes are painful to interact with - but possible
+* Parallel test runs only available when using multiple build servers and Cypress Dashboard
+ * Large test suites can take minutes to run
+ * Still beats manual testing - just go make tea
+
+---
+
+# Bonus Example
+
+greeting-extra.spec.js
+```javascript
+const viewports = [
+  {
+    name: 'desktop',
+    width: 1400,
+    height: 900
+  },
+  {
+    name: 'tablet',
+    width: 768,
+    height: 1024
+  },
+  ...
+]
+
+viewports.forEach(viewport => {
+  context(`Greeting Application on ${viewport.name}`, () => {
+
+    beforeEach(() => {
+        cy.visit('/app.html')
+        cy.viewport(viewport.width, viewport.height)
+      })
+```
+
+---
+
+# Bonus Example Result
+
+![Default-aligned image](bonus-extra.png)
+
+
+---
+
+# Questions? Comments?
+### Cypress @ https://www.cypress.io/
+### StimulusJS @ https://stimulusjs.org/
+### Slides made with RemarkJS @ https://github.com/gnab/remark
+
+**Email**: stephen@happyvalley.io
+
+**Twitter**: @stepbeekio
+
+
+    </textarea>
+    <script src="https://remarkjs.com/downloads/remark-latest.min.js">
+    </script>
+    <script>
+        var slideshow = remark.create();
+    </script>
+</body>
+
+</html>

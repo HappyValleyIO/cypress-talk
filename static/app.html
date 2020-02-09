@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css">
+    <script src="https://unpkg.com/stimulus/dist/stimulus.umd.js"></script>
+    <script>
+        (() => {
+            const application = Stimulus.Application.start()
+
+            application.register("hello", class extends Stimulus.Controller {
+                static get targets() {
+                    return ["name", "greeting"]
+                }
+
+                greet(e) {
+                    e.preventDefault();
+                    const name = this.nameTarget.value
+                    this.nameTarget.value = ''
+                    this.greetingTarget.innerHTML = `Hello ${name}!`
+                }
+            })
+        })()
+    </script>
+</head>
+
+<body>
+    <div class="content" data-controller="hello">
+        <h1 class="title" data-target="hello.greeting" data-test="greeting-text">Hello World!</h1>
+
+        <form data-action="submit->hello#greet">
+            <input data-target="hello.name" type="text" data-test="greeting-input">
+            <button data-test="greeting-submit">Greet!</button>
+        </form>
+    </div>
+</body>
+
+</html>
